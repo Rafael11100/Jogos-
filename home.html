@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>100 Jogos Mais Populares</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand">
+    <div class="toolbar">
+      <div class="searchWrap">
+        <input id="search" class="input" placeholder="Buscar jogo..." />
+      </div>
+      <div class="filterRow" aria-label="Filtros">
+        <div class="chip" data-platform="Todos" data-active="true">Todos</div>
+        <div class="chip" data-platform="PC">PC</div>
+        <div class="chip" data-platform="Console">Console</div>
+        <div class="chip" data-platform="Celular">Celular</div>
+      </div>
+    </div>
+
+    <div id="grid" class="grid"></div>
+
+    <div class="footerNote">
+      <b>Observação:</b> preços e disponibilidade podem variar por região, promoções e edição.
+      Os links são páginas oficiais para baixar/entrar na loja.
+    </div>
+  </div>
+
+  <script src="games.js"></script>
+  <script>
+
+    // botão “Entrar” (redireciona para a própria página de jogos)
+    const enterBtn = document.getElementById('enterBtn');
+    if (enterBtn) {
+      enterBtn.addEventListener('click', () => {
+        window.location.href = 'index.html';
+      });
+    }
+
+
+    const grid = document.getElementById('grid');
+    const searchInput = document.getElementById('search');
+    const themeBtn = document.getElementById('themeBtn');
+
+    let activePlatform = 'Todos';
+
+    function getTheme(){
+      return document.documentElement.getAttribute('data-theme') || 'dark';
+    }
+
+    function setTheme(theme){
+      if(theme === 'light') document.documentElement.setAttribute('data-theme','light');
+      else document.documentElement.removeAttribute('data-theme');
+      localStorage.setItem('siteTheme', theme);
+    }
+
+    const savedTheme = localStorage.getItem('siteTheme');
+    if(savedTheme === 'light') setTheme('light');
+
+    if(themeBtn){
+      themeBtn.addEventListener('click', () => {
+        setTheme(getTheme() === 'light' ? 'dark' : 'light');
+      });
+    }
+
+
+    const platformChips = Array.from(document.querySelectorAll('.chip[data-platform]'));
+    for (const chip of platformChips) {
+      chip.addEventListener('click', () => {
+        activePlatform = chip.getAttribute('data-platform');
+        for (const c of platformChips) c.dataset.active = 'false';
+        chip.dataset.active = 'true';
+        render();
+      });
+    }
+
+    searchInput.addEventListener('input', () => render());
+
+    function normalize(s){
+      return (s || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+    }
+
+    function render() {
+      const q = normalize(searchInput.value);
+
+      const filtered = GAMES.filter(g => {
+        const matchPlatform = activePlatform === 'Todos' || g.platforms.includes(activePlatform);
+        const matchText = !q || normalize(g.name + ' ' + g.type + ' ' + g.platforms.join(' ')).includes(q);
+        return matchPlatform && matchText;
+      }).sort((a,b) => normalize(a.name).localeCompare(normalize(b.name), 'pt'));
+
+
+      grid.innerHTML = '';
+
+      for (const game of filtered) {
+        const card = document.createElement('div');
+        card.className = 'card';
+
+        const platformList = game.platforms.map(p => `<span class="pill">${p}</span>`).join('');
+
+        card.innerHTML = `
+          <div class="cardTop">
+            <div class="logo">${escapeHtml(game.name.slice(0,1).toUpperCase())}</div>
+            <div style="flex:1">
+              <p class="gameName">${escapeHtml(game.name)}</p>
+              <div class="meta">${escapeHtml(game.type)}</div>
+              <div class="platforms">${platformList}</div>
+            </div>
+          </div>
+
+          <div class="price">${escapeHtml(game.price)}</div>
+          <div class="desc">
+            <b>Descrição:</b> ${escapeHtml(game.howItWorks)}
+          </div>
+
+
+          <div class="actions">
+            <a class="btn btnPrimary" href="${escapeAttr(game.link)}" target="_blank" rel="noreferrer">
+              <span style="font-size:16px">▶</span> JOGAR / ACESSAR
+            </a>
+            <a class="btn" href="${escapeAttr(game.link)}" target="_blank" rel="noreferrer" style="border-color: rgba(0,255,154,.35);">
+              <span style="font-size:16px">⤴</span> SITE OFICIAL
+            </a>
+          </div>
+        `;
+
+        grid.appendChild(card);
+      }
+
+      if (filtered.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'footerNote';
+        empty.textContent = 'Nenhum jogo encontrado para esse filtro/busca.';
+        grid.appendChild(empty);
+      }
+    }
+
+    function escapeHtml(str){
+      return String(str)
+        .replaceAll('&','&amp;')
+        .replaceAll('<','<')
+        .replaceAll('>','>')
+        .replaceAll('"','"')
+        .replaceAll("'",'&#039;');
+    }
+
+    function escapeAttr(str){
+      return encodeURI(String(str));
+    }
+
+    render();
+  </script>
+</body>
+</html>
+
